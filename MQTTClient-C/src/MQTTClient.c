@@ -402,6 +402,44 @@ exit:
     return rc;
 }
 
+/****************************************************************************************/
+/*Function to convert unsigned char to string of length 2*/
+static void Char2Hex(unsigned char ch, char *szHex)
+{  
+    int i;  
+    unsigned char byte[2];  
+    byte[0] = ch/16;  
+    byte[1] = ch%16;  
+    for(i=0; i<2; i++)  
+    {  
+        if(byte[i] >= 0 && byte[i] <= 9)  
+            szHex[i] = '0' + byte[i];  
+        else  
+            szHex[i] = 'A' + byte[i] - 10;  
+    }  
+    szHex[2] = 0;  
+}
+
+/*Function to convert string of unsigned chars to string of chars*/  
+unsigned char * CharStr2HexStr(unsigned char *pucCharStr, int iSize)  
+{  
+    int i;  
+    char szHex[3];  
+	int len = iSize*2;
+	unsigned char *ret;
+	ret = (unsigned char *)malloc(len);
+	if (ret == NULL) {
+	  printf("%s, %d, no memory\n", __func__, __LINE__);
+	  return NULL;
+	}
+	memset(ret, 0, len);
+    for(i=0; i<iSize; i++)  
+    {  
+        Char2Hex(pucCharStr[i], szHex);  
+        strcat(ret, szHex);  
+    }
+	return ret;
+}
 
 int MQTTSubscribe(MQTTClient* c, const char* topicFilter, enum QoS qos, messageHandler messageHandler)
 { 
@@ -409,6 +447,7 @@ int MQTTSubscribe(MQTTClient* c, const char* topicFilter, enum QoS qos, messageH
     Timer timer;
     int len = 0;
     MQTTString topic = MQTTString_initializer;
+	unsigned char *tmp;
     topic.cstring = (char *)topicFilter;
     
 #if defined(MQTT_TASK)
@@ -425,7 +464,10 @@ int MQTTSubscribe(MQTTClient* c, const char* topicFilter, enum QoS qos, messageH
         goto exit;
     if ((rc = sendPacket(c, len, &timer)) != SUCCESS) // send the subscribe packet
         goto exit;             // there was a problem
-    
+	if (tmp = CharStr2HexStr(c->buf, c->buf_size)) {
+	  printf("%s\n", tmp);
+	  free(tmp);
+	}
     if (waitfor(c, SUBACK, &timer) == SUBACK)      // wait for suback 
     {
         int count = 0, grantedQoS = -1;
